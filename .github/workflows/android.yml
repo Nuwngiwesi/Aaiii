@@ -32,6 +32,30 @@ jobs:
           log-accepted-android-sdk-licenses: false
           packages: "platform-tools platforms;android-35 build-tools;35.0.0"
 
+      - name: Find Gradle project
+        id: find_gradle
+        shell: bash
+        run: |
+          echo "Repository root:"
+          pwd
+          ls -la
+
+          SETTINGS_FILE="$(find . -maxdepth 6 \
+            \( -name settings.gradle -o -name settings.gradle.kts \) \
+            -not -path '*/.gradle/*' \
+            -print -quit)"
+
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "ERROR: No Gradle settings file found."
+            echo "The Android project may be missing from this repository."
+            exit 1
+          fi
+
+          PROJECT_DIR="$(dirname "$SETTINGS_FILE")"
+
+          echo "Found Gradle project: $PROJECT_DIR"
+          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -39,17 +63,23 @@ jobs:
 
       - name: Verify Android SDK
         run: |
-          sdkmanager --list_installed
           test -d "$ANDROID_HOME/platforms/android-35"
           test -d "$ANDROID_HOME/build-tools/35.0.0"
 
       - name: Build LYNKO AI APK
-        run: gradle :android:app:assembleDebug --no-daemon
+        shell: bash
+        env:
+          PROJECT_DIR: ${{ steps.find_gradle.outputs.project_dir }}
+        run: |
+          set -e
+          gradle -p "$PROJECT_DIR" \
+            :android:app:assembleDebug \
+            --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: LYNKO-AI-debug-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: "**/build/outputs/apk/debug/app-debug.apk"
           if-no-files-found: error
           retention-days: 7
