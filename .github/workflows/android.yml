@@ -25,33 +25,21 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android SDK licenses
-        shell: bash
+      - name: Verify Android SDK
         run: |
-          set -e
-          mkdir -p "$ANDROID_HOME/licenses"
-          touch "$ANDROID_HOME/licenses/android-sdk-license"
-          yes | sdkmanager --licenses || true
-
-      - name: Install Android SDK packages
-        shell: bash
-        run: |
-          set -e
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
-
-      - name: Verify SDK installation
-        run: |
+          sdkmanager --list_installed
           test -d "$ANDROID_HOME/platforms/android-35"
           test -d "$ANDROID_HOME/build-tools/35.0.0"
 
