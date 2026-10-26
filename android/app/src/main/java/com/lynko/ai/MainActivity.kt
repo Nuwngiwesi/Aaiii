@@ -6,20 +6,19 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.view.Gravity
-import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
@@ -35,41 +34,34 @@ import java.util.Locale
 class MainActivity : Activity() {
 
     private var recognizer: SpeechRecognizer? = null
+
     private lateinit var statusText: TextView
     private lateinit var listenButton: Button
     private lateinit var responseText: TextView
 
-    private var isListening = false
-
-    // Replace this with your deployed backend URL.
-    // Keep the Groq API key on the backend, never inside this app.
     private val backendUrl =
-        "https://YOUR-BACKEND.onrender.com/command"
+        "https://aaiii.onrender.com/command"
 
     private val blue = Color.rgb(0, 190, 255)
-    private val backgroundColor = Color.rgb(7, 12, 28)
+    private val darkBackground = Color.rgb(7, 12, 28)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         createInterface()
-
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            statusText.text = "Speech recognition is unavailable"
-        }
-
-        requestPermissionsIfNeeded()
+        requestMicrophonePermission()
     }
 
     private fun createInterface() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(24, 32, 24, 24)
             gravity = Gravity.CENTER_HORIZONTAL
-            setBackgroundColor(backgroundColor)
+            setPadding(24, 28, 24, 24)
+            setBackgroundColor(darkBackground)
         }
 
         val scroll = ScrollView(this)
+
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -77,7 +69,7 @@ class MainActivity : Activity() {
 
         val logo = TextView(this).apply {
             text = "◈"
-            textSize = 64f
+            textSize = 68f
             gravity = Gravity.CENTER
             setTextColor(blue)
         }
@@ -87,26 +79,26 @@ class MainActivity : Activity() {
             textSize = 32f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
-            typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            typeface = Typeface.DEFAULT_BOLD
         }
 
         val subtitle = TextView(this).apply {
-            text = "YOUR PERSONAL VOICE ASSISTANT"
+            text = "YOUR PERSONAL AI ASSISTANT"
             textSize = 12f
             gravity = Gravity.CENTER
             setTextColor(blue)
         }
 
         statusText = TextView(this).apply {
-            text = "Ready to connect"
+            text = "Ready to start"
             textSize = 15f
             gravity = Gravity.CENTER
             setTextColor(Color.LTGRAY)
-            setPadding(0, 32, 0, 20)
+            setPadding(0, 30, 0, 20)
         }
 
         listenButton = Button(this).apply {
-            text = "🎙  START LISTENING"
+            text = "🎙 START LISTENING"
             textSize = 16f
             setTextColor(Color.WHITE)
             background = roundedBackground(blue, 24f)
@@ -117,7 +109,6 @@ class MainActivity : Activity() {
 
         val stopButton = Button(this).apply {
             text = "STOP LISTENING"
-            textSize = 14f
             setTextColor(Color.WHITE)
             background = roundedBackground(
                 Color.rgb(45, 53, 75), 24f
@@ -128,7 +119,7 @@ class MainActivity : Activity() {
         }
 
         val youtubeButton = Button(this).apply {
-            text = "▶  OPEN YOUTUBE"
+            text = "▶ OPEN YOUTUBE"
             setTextColor(Color.WHITE)
             background = roundedBackground(
                 Color.rgb(200, 35, 55), 24f
@@ -139,23 +130,25 @@ class MainActivity : Activity() {
         }
 
         responseText = TextView(this).apply {
-            text = "Hello! I'm LYNKO, your AI assistant."
+            text = "Hello! I'm LYNKO. How can I help you?"
             textSize = 16f
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
-            setPadding(12, 30, 12, 20)
+            setPadding(12, 28, 12, 24)
         }
 
-        val hint = TextView(this).apply {
+        val instructions = TextView(this).apply {
             text = """
                 Try saying:
 
-                • LYNKO, search YouTube for music
-                • LYNKO, open YouTube
-                • LYNKO, hello
+                • Search YouTube for Raveen Kanishka
+                • Open YouTube
+                • Hi LYNKO
+                • Mata sinduwak hoyala denna
 
-                Tap START LISTENING to begin.
+                Tap START LISTENING to speak.
             """.trimIndent()
+
             textSize = 14f
             setTextColor(Color.LTGRAY)
             setPadding(8, 20, 8, 24)
@@ -168,68 +161,63 @@ class MainActivity : Activity() {
 
         content.addView(
             listenButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 58
-            ).apply {
-                bottomMargin = 12
-            }
+            fullWidthButton(58)
         )
 
         content.addView(
             stopButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 54
-            ).apply {
-                bottomMargin = 12
-            }
+            fullWidthButton(54)
         )
 
         content.addView(
             youtubeButton,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 54
-            )
+            fullWidthButton(54)
         )
 
         content.addView(responseText)
-        content.addView(hint)
+        content.addView(instructions)
 
         scroll.addView(content)
 
         root.addView(
             scroll,
             LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
             )
         )
 
         setContentView(root)
     }
 
+    private fun fullWidthButton(height: Int) =
+        LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            height
+        ).apply {
+            bottomMargin = 12
+        }
+
     private fun roundedBackground(
         color: Int,
         radius: Float
-    ): GradientDrawable {
-        return GradientDrawable().apply {
-            setColor(color)
-            cornerRadius = radius
-        }
+    ) = GradientDrawable().apply {
+        setColor(color)
+        cornerRadius = radius
     }
 
-    private fun requestPermissionsIfNeeded() {
-        val permissions = mutableListOf<String>()
-
+    private fun requestMicrophonePermission() {
         if (
             ContextCompat.checkSelfPermission(
-                this, Manifest.permission.RECORD_AUDIO
+                this,
+                Manifest.permission.RECORD_AUDIO
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            permissions.add(Manifest.permission.RECORD_AUDIO)
-        }
-
-        if (permissions.isNotEmpty()) {
             ActivityCompat.requestPermissions(
-                this, permissions.toTypedArray(), 100
+                this,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                100
             )
         }
     }
@@ -237,20 +225,21 @@ class MainActivity : Activity() {
     private fun startListening() {
         if (
             ContextCompat.checkSelfPermission(
-                this, Manifest.permission.RECORD_AUDIO
+                this,
+                Manifest.permission.RECORD_AUDIO
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            requestPermissionsIfNeeded()
+            requestMicrophonePermission()
             statusText.text = "Please allow microphone permission"
             return
         }
 
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            statusText.text = "Speech recognition is unavailable"
+            statusText.text = "Speech recognition unavailable"
             return
         }
 
-        stopListening()
+        stopRecognizerOnly()
 
         recognizer = SpeechRecognizer.createSpeechRecognizer(this)
 
@@ -259,39 +248,39 @@ class MainActivity : Activity() {
 
                 override fun onReadyForSpeech(params: Bundle?) {
                     statusText.text = "Listening... Speak now"
-                    listenButton.text = "🎙  LISTENING..."
+                    listenButton.text = "🎙 LISTENING..."
                 }
 
                 override fun onBeginningOfSpeech() {
-                    statusText.text = "I can hear you..."
+                    statusText.text = "Hearing your voice..."
                 }
 
                 override fun onRmsChanged(rmsdB: Float) {}
+
                 override fun onBufferReceived(buffer: ByteArray?) {}
+
                 override fun onEndOfSpeech() {
-                    statusText.text = "Processing your voice..."
+                    statusText.text = "Processing..."
                 }
 
                 override fun onError(error: Int) {
-                    isListening = false
-                    listenButton.text = "🎙  START LISTENING"
+                    listenButton.text = "🎙 START LISTENING"
                     statusText.text =
-                        "Couldn't hear you. Tap to try again."
+                        "Listening stopped. Tap to try again."
                 }
 
                 override fun onResults(results: Bundle?) {
-                    isListening = false
-                    listenButton.text = "🎙  START LISTENING"
+                    listenButton.text = "🎙 START LISTENING"
 
                     val matches = results?.getStringArrayList(
                         SpeechRecognizer.RESULTS_RECOGNITION
                     )
 
-                    val spokenText = matches?.firstOrNull().orEmpty()
+                    val command = matches?.firstOrNull().orEmpty()
 
-                    if (spokenText.isNotBlank()) {
-                        responseText.text = "You said: $spokenText"
-                        processCommand(spokenText)
+                    if (command.isNotBlank()) {
+                        responseText.text = "You said:\n$command"
+                        processCommand(command)
                     } else {
                         statusText.text = "No speech detected"
                     }
@@ -301,11 +290,14 @@ class MainActivity : Activity() {
                     partialResults: Bundle?
                 ) {}
 
-                override fun onEvent(eventType: Int, params: Bundle?) {}
+                override fun onEvent(
+                    eventType: Int,
+                    params: Bundle?
+                ) {}
             }
         )
 
-        val intent = Intent(
+        val speechIntent = Intent(
             RecognizerIntent.ACTION_RECOGNIZE_SPEECH
         ).apply {
             putExtra(
@@ -316,89 +308,71 @@ class MainActivity : Activity() {
                 RecognizerIntent.EXTRA_LANGUAGE,
                 Locale.getDefault().toLanguageTag()
             )
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(
+                RecognizerIntent.EXTRA_PARTIAL_RESULTS,
+                true
+            )
         }
 
-        isListening = true
-        recognizer?.startListening(intent)
+        try {
+            recognizer?.startListening(speechIntent)
+        } catch (e: Exception) {
+            statusText.text = "Could not start microphone"
+        }
+    }
+
+    private fun stopRecognizerOnly() {
+        try {
+            recognizer?.cancel()
+            recognizer?.destroy()
+        } catch (_: Exception) {
+        }
+
+        recognizer = null
     }
 
     private fun stopListening() {
-        isListening = false
-        recognizer?.cancel()
-        recognizer?.destroy()
-        recognizer = null
-
-        if (::listenButton.isInitialized) {
-            listenButton.text = "🎙  START LISTENING"
-        }
-
-        if (::statusText.isInitialized) {
-            statusText.text = "Listening stopped"
-        }
+        stopRecognizerOnly()
+        listenButton.text = "🎙 START LISTENING"
+        statusText.text = "Listening stopped"
     }
 
     private fun processCommand(command: String) {
-        val text = command.trim()
-        val lower = text.lowercase(Locale.ROOT)
+        val lower = command.lowercase(Locale.ROOT)
 
-        // Basic commands work without an AI API.
         if (
-            lower.contains("youtube") &&
-            (
-                lower.contains("search") ||
-                lower.contains("play") ||
-                lower.contains("find") ||
-                lower.contains("music") ||
-                lower.contains("song")
-            )
+            lower.contains("open youtube") ||
+            lower.contains("youtube open") ||
+            lower.contains("youtube ekata yanna")
         ) {
-            val query = text
-                .replace("lynko", "", ignoreCase = true)
-                .replace("search", "", ignoreCase = true)
-                .replace("youtube", "", ignoreCase = true)
-                .replace("play", "", ignoreCase = true)
-                .replace("find", "", ignoreCase = true)
-                .replace("music", "", ignoreCase = true)
-                .replace("song", "", ignoreCase = true)
-                .trim()
-
-            searchYoutube(query.ifBlank { text })
-            return
-        }
-
-        if (lower.contains("open youtube")) {
             openYoutube()
             return
         }
 
-        // Free-form commands go to your backend.
-        sendToBackend(text)
-    }
-
-    private fun searchYoutube(query: String) {
-        val encoded = URLEncoder.encode(query, "UTF-8")
-        val uri = Uri.parse(
-            "https://www.youtube.com/results?search_query=$encoded"
-        )
-
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, uri))
-            responseText.text = "Searching YouTube for: $query"
-            statusText.text = "YouTube opened"
-        } catch (e: Exception) {
-            responseText.text = "Unable to open YouTube"
+        if (
+            lower.contains("youtube") ||
+            lower.contains("song") ||
+            lower.contains("music") ||
+            lower.contains("sindu") ||
+            lower.contains("sinduwak") ||
+            lower.contains("play")
+        ) {
+            sendToBackend(command)
+            return
         }
+
+        sendToBackend(command)
     }
 
     private fun openYoutube() {
         try {
-            val intent = packageManager.getLaunchIntentForPackage(
-                "com.google.android.youtube"
-            )
+            val launchIntent =
+                packageManager.getLaunchIntentForPackage(
+                    "com.google.android.youtube"
+                )
 
-            if (intent != null) {
-                startActivity(intent)
+            if (launchIntent != null) {
+                startActivity(launchIntent)
             } else {
                 startActivity(
                     Intent(
@@ -407,108 +381,150 @@ class MainActivity : Activity() {
                     )
                 )
             }
+
+            responseText.text = "Opening YouTube..."
+            statusText.text = "Done"
         } catch (e: Exception) {
             statusText.text = "Unable to open YouTube"
         }
     }
 
-    private fun sendToBackend(command: String) {
-        if (backendUrl.contains("YOUR-BACKEND")) {
-            responseText.text =
-                "Basic commands work. Configure your AI backend for other commands."
-            statusText.text = "Backend URL not configured"
-            return
-        }
+    private fun searchYoutube(query: String) {
+        val encodedQuery = URLEncoder.encode(query, "UTF-8")
 
-        statusText.text = "Thinking..."
+        val uri = Uri.parse(
+            "https://www.youtube.com/results?search_query=$encodedQuery"
+        )
+
+        try {
+            startActivity(
+                Intent(Intent.ACTION_VIEW, uri)
+            )
+
+            responseText.text = "Searching YouTube for:\n$query"
+            statusText.text = "YouTube search opened"
+        } catch (e: Exception) {
+            statusText.text = "Could not open YouTube search"
+        }
+    }
+
+    private fun sendToBackend(command: String) {
+        statusText.text = "LYNKO AI is thinking..."
 
         CoroutineScope(Dispatchers.IO).launch {
+            var connection: HttpURLConnection? = null
+
             try {
-                val connection =
+                connection =
                     URL(backendUrl).openConnection()
                         as HttpURLConnection
 
                 connection.requestMethod = "POST"
-                connection.connectTimeout = 15000
-                connection.readTimeout = 20000
+                connection.connectTimeout = 20000
+                connection.readTimeout = 30000
                 connection.doOutput = true
+
                 connection.setRequestProperty(
-                    "Content-Type", "application/json"
+                    "Content-Type",
+                    "application/json; charset=UTF-8"
                 )
 
                 val body = JSONObject()
                     .put("command", command)
                     .toString()
 
-                connection.outputStream.use {
-                    it.write(body.toByteArray(Charsets.UTF_8))
+                connection.outputStream.use { output ->
+                    output.write(
+                        body.toByteArray(Charsets.UTF_8)
+                    )
                 }
 
-                val code = connection.responseCode
-                val stream = if (code in 200..299) {
-                    connection.inputStream
-                } else {
-                    connection.errorStream
+                val statusCode = connection.responseCode
+
+                val stream =
+                    if (statusCode in 200..299) {
+                        connection.inputStream
+                    } else {
+                        connection.errorStream
+                    }
+
+                val responseBody = stream
+                    ?.bufferedReader()
+                    ?.use { it.readText() }
+                    ?: ""
+
+                if (statusCode !in 200..299) {
+                    throw Exception("HTTP $statusCode")
                 }
 
-                val result = stream.bufferedReader().use {
-                    it.readText()
-                }
-
-                connection.disconnect()
+                val result = JSONObject(responseBody)
 
                 withContext(Dispatchers.Main) {
-                    if (code in 200..299) {
-                        val json = JSONObject(result)
-                        val action = json.optString("action", "REPLY")
-                        val reply = json.optString(
-                            "reply", "Command received"
-                        )
-
-                        when (action) {
-                            "SEARCH_YOUTUBE" -> {
-                                searchYoutube(
-                                    json.optString("query", command)
-                                )
-                            }
-
-                            "OPEN_APP" -> {
-                                when (
-                                    json.optString("app").lowercase()
-                                ) {
-                                    "youtube" -> openYoutube()
-                                    "chrome" -> openChrome()
-                                    else -> responseText.text = reply
-                                }
-                            }
-
-                            else -> {
-                                responseText.text = reply
-                            }
-                        }
-
-                        statusText.text = "Ready"
-                    } else {
-                        responseText.text =
-                            "Backend error: HTTP $code"
-                        statusText.text = "Request failed"
-                    }
+                    handleBackendResponse(result, command)
                 }
+
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     responseText.text =
-                        "Couldn't connect to AI backend."
-                    statusText.text = "Connection failed"
+                        "AI connection failed.\n" +
+                        "Check your backend and internet connection."
+
+                    statusText.text = "Connection error"
                 }
+            } finally {
+                connection?.disconnect()
             }
         }
     }
 
+    private fun handleBackendResponse(
+        result: JSONObject,
+        originalCommand: String
+    ) {
+        val action = result.optString("action", "REPLY")
+        val reply = result.optString(
+            "reply",
+            "Command received."
+        )
+
+        when (action) {
+            "SEARCH_YOUTUBE" -> {
+                val query = result.optString(
+                    "query",
+                    originalCommand
+                )
+
+                if (query.isNotBlank()) {
+                    searchYoutube(query)
+                } else {
+                    responseText.text = reply
+                }
+            }
+
+            "OPEN_APP" -> {
+                when (
+                    result.optString("app").lowercase(Locale.ROOT)
+                ) {
+                    "youtube" -> openYoutube()
+                    "chrome" -> openChrome()
+                    else -> responseText.text = reply
+                }
+            }
+
+            else -> {
+                responseText.text = reply
+            }
+        }
+
+        statusText.text = "LYNKO AI is ready"
+    }
+
     private fun openChrome() {
         try {
-            val intent = packageManager.getLaunchIntentForPackage(
-                "com.android.chrome"
-            )
+            val intent =
+                packageManager.getLaunchIntentForPackage(
+                    "com.android.chrome"
+                )
 
             if (intent != null) {
                 startActivity(intent)
@@ -521,13 +537,16 @@ class MainActivity : Activity() {
                 )
             }
         } catch (e: Exception) {
-            responseText.text = "Unable to open browser"
+            Toast.makeText(
+                this,
+                "Unable to open browser",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
     override fun onDestroy() {
-        stopListening()
+        stopRecognizerOnly()
         super.onDestroy()
     }
 }
-
